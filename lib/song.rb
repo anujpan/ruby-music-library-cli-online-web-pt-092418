@@ -1,49 +1,60 @@
-require "pry"
-
-class Song
+class Song 
   attr_accessor :name
   attr_reader :artist, :genre
   
-  extend Concerns::Findable
-
   @@all = []
   
-  def initialize(name, artist_obj=nil, genre_obj = nil)
+  def initialize(name, artist = nil, genre = nil)
     @name = name
-    self.genre=(genre_obj) if genre_obj != nil
-    self.artist=(artist_obj) if artist_obj != nil
+    self.artist = artist if artist 
+    self.genre = genre if genre
+  end 
+  
+  def artist=(artist)
+    @artist = artist 
+    artist.add_song(self) 
   end
   
-  def self.all
-    @@all
+  def genre=(genre)
+    @genre = genre
+    unless genre.songs.include?(self)
+      genre.songs << self
+    end
   end
   
-  def self.destroy_all
-    # 
-    # @@all.clear
-    # below is better because it doesnt rely on the class var
-    
-    self.all.clear
+  def self.all 
+    @@all.uniq
+  end 
+   def self.destroy_all 
+    @@all.clear 
+  end 
+  
+  def save 
+    @@all << self
+  end 
+  
+  def self.create(song)
+    self.new(song).tap {|song| song.save}
   end
   
-  def save
-    # 
-    # @@all.push(self)
-    # below is better because it doesnt rely on the class var
-
-    self.class.all.push(self)
-  end
-
-  def artist=(artist_obj)
-    @artist = artist_obj
-    
-    artist_obj.add_song(self)
+  def self.find_by_name(name) 
+    all.find{ |song| song.name == name }
+  end 
+  
+  def self.find_or_create_by_name(name)
+    find_by_name(name) || create(name)
   end
   
-  def genre=(genre_obj)
-    @genre = genre_obj
-    
-    genre_obj.add_song(self)
-  end
-end
-
+  def self.new_from_filename(file)
+    new_file = file.split(" - ")
+      artist = new_file[0]
+      name = new_file[1]
+      genre = new_file[2].gsub(".mp3","")
+    new_artist = Artist.find_or_create_by_name(artist)
+    new_genre = Genre.find_or_create_by_name(genre)
+    new_song = Song.new(name, new_artist, new_genre)
+  end 
+   def self.create_from_filename(file)
+    @@all << new_from_filename(file)
+  end 
+end 
